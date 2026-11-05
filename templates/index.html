@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boletín Oficial</title>
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#0A2F5C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Boletín Al Día">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="icon" href="/static/icon-192.png">
+<style>
+body{font-family:system-ui;margin:0;background:#F2F4F7}
+header{background:#0A2F5C;color:white;padding:18px}
+.box{background:white;margin:12px;padding:16px;border-radius:14px}
+input,select{width:100%;padding:12px;border-radius:10px;border:1px solid #ddd;box-sizing:border-box;margin-top:8px}
+.btn-main{width:100%;padding:14px;background:#0A2F5C;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;margin-top:10px}
+.card{background:white;margin:12px;padding:18px;border-radius:14px;border-left:4px solid #0A2F5C;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;color:white;letter-spacing:.3px}
+.badge-DECRETO{background:#7C3AED}.badge-LEY{background:#DC2626}.badge-RESOLUCION{background:#EA580C}.badge-ACORDADA{background:#0A2F5C}.badge-SUCESORIO{background:#217346}.badge-HONORARIOS{background:#B45309}.badge-CLIENTE{background:#DB2777}.badge-CONCURSO{background:#0891B2}.badge-OTRO{background:#64748B}
+.badge-pag{background:#E8EEF5;color:#0A2F5C;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700}
+.badge-fuero{background:#FFC107;color:#111;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700}
+.resumen{font-size:14px;line-height:1.6;color:#4B5563;margin:8px 0 12px}
+.btns{display:flex;gap:8px}.btn-ver{flex:1;background:#0A2F5C;color:white;padding:11px;border-radius:8px;text-align:center;text-decoration:none;font-weight:700;font-size:14px}.btn-copiar{flex:1;background:white;color:#0A2F5C;border:1px solid #0A2F5C;padding:11px;border-radius:8px;font-weight:700;cursor:pointer}
+.filtros{display:flex;gap:8px;flex-wrap:wrap;margin:12px}.filtros button{padding:10px 14px;border-radius:20px;border:1px solid #0A2F5C;background:white;font-weight:700;cursor:pointer}.filtros button.active{background:#0A2F5C;color:white}
+.nav{display:flex;gap:8px;margin-top:10px}.nav button{flex:1;padding:12px;border-radius:10px;border:1px solid #0A2F5C;background:white;font-weight:700;cursor:pointer}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.chips span{background:#F1F5F9;padding:6px 10px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+<header><h1 style="margin:0">⚖️ Boletín Al Día</h1><p style="opacity:.8;margin:4px 0 0">Río Negro - Decretos, Leyes, Sucesiones</p></header>
+
+<div class="box">
+<b>📚 ELEGÍ EL BOLETÍN</b>
+<select id="selector" onchange="cambiarBoletin(this.value)">
+  {% for n in lista %}<option value="{{ n }}" {% if n==ultimo %}selected{% endif %}>Boletín N° {{ n }} {% if n==ultimo %}- HOY ★{% endif %}</option>{% endfor %}
+</select>
+<div class="nav"><button onclick="anterior()">⬅️ Anterior</button><button onclick="siguiente()">Siguiente ➡️</button></div>
+<input id="numero" type="number" value="{{ ultimo }}" oninput="syncBoton()">
+<a id="linkRN" href="https://rionegro.gov.ar/download/boletin/{{ ultimo }}.pdf" target="_blank" style="display:block;background:#0A2F5C;color:white;padding:14px;border-radius:10px;text-align:center;text-decoration:none;font-weight:700;margin-top:10px">📄 VER PDF OFICIAL N° {{ ultimo }}</a>
+</div>
+
+<div class="box">
+<b>🔍 BUSCAR POR PALABRA CLAVE</b>
+<input id="clientes" placeholder="Ej: Pérez, Ley 5020, Decreto 123, Sucesión García...">
+<div class="chips">
+  <span onclick="setBuscar('Decreto')">📜 Decreto</span><span onclick="setBuscar('Ley')">📕 Ley</span><span onclick="setBuscar('Sucesión')">👨‍👩‍👧 Sucesión</span><span onclick="setBuscar('Honorarios')">💰 Honorarios</span><span onclick="setBuscar('Concurso')">📋 Concurso</span>
+</div>
+<button class="btn-main" onclick="buscar()">🔍 BUSCAR EN ESTE BOLETÍN</button>
+<div style="display:flex;gap:8px;margin-top:10px">
+  <input id="desde" type="number" value="6535" style="flex:1" placeholder="Desde">
+  <input id="hasta" type="number" value="{{ ultimo }}" style="flex:1" placeholder="Hasta">
+</div>
+<button class="btn-main" style="background:#217346" onclick="buscarRango()">📅 BUSCAR EN RANGO</button>
+<a href="/api/excel" style="display:block;background:#217346;color:white;padding:12px;border-radius:10px;text-align:center;text-decoration:none;font-weight:700;margin-top:10px">📊 Descargar Excel</a>
+</div>
+
+<div class="box" id="filtrosBox" style="display:none">
+<b>🎯 FILTRAR LO QUE YA ENCONTRASTE</b>
+<p style="font-size:13px;color:#666;margin:6px 0">TIPO:</p>
+<div id="filtrosTipo" class="filtros" style="margin:0"></div>
+<p style="font-size:13px;color:#666;margin:6px 0">FUERO:</p>
+<div id="filtrosFuero" class="filtros" style="margin:0"></div>
+<p style="font-size:13px;color:#666;margin:6px 0">BUSCAR DENTRO DE LOS RESULTADOS:</p>
+<input id="buscarDentro" placeholder="Ej: 1044, Pérez, Viedma..." oninput="filtrarActual()">
+</div>
+
+<div id="info"></div>
+<div id="resultado"></div>
+
+<script>
+let tipoActual='Todos', fueroActual='Todos';
+function setBuscar(t){ document.getElementById('clientes').value=t; }
+function syncBoton(){ let n=document.getElementById('numero').value; let l=document.getElementById('linkRN'); l.href='https://rionegro.gov.ar/download/boletin/'+n+'.pdf'; l.textContent='📄 VER PDF OFICIAL N° '+n; }
+function cambiarBoletin(n){ document.getElementById('numero').value=n; syncBoton(); }
+function anterior(){ let s=document.getElementById('selector'); if(s.selectedIndex<s.options.length-1){s.selectedIndex++; cambiarBoletin(s.value);} }
+function siguiente(){ let s=document.getElementById('selector'); if(s.selectedIndex>0){s.selectedIndex--; cambiarBoletin(s.value);} }
+function render(lista){
+  let html='';
+  if(lista.length===0) html='<div class="box">Sin resultados con ese filtro.</div>';
+  lista.forEach(r=>{
+    let normaHtml = '';
+    let tituloHtml = '';
+    if(r.numero_norma){
+      normaHtml = `<div style="background:#FEF3C7;color:#92400E;padding:8px 12px;border-radius:8px;font-weight:800;font-size:15px;display:inline-block;margin:10px 0 4px">📜 ${r.numero_norma}</div>`;
+      tituloHtml = `<h3 style="margin:8px 0 0;font-size:17px;line-height:1.3">${r.titulo}</h3>`;
+    } else {
+      tituloHtml = `<h3 style="margin:10px 0 0;font-size:17px;line-height:1.3">${r.titulo}</h3>`;
+    }
+    html+=`<div class="card">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <span class="badge badge-${r.tipo}">${r.tipo}</span>
+        <span class="badge-pag">Boletín ${r.numero} - Pág. ${r.pagina}</span>
+        <span class="badge-fuero">${r.fuero}</span>
+      </div>
+      ${normaHtml}
+      ${tituloHtml}
+      <p class="resumen">${r.resumen}</p>
+      <div class="btns"><a class="btn-ver" href="${r.link_pdf}" target="_blank">📄 Ver en PDF - Pág. ${r.pagina}</a><button class="btn-copiar" onclick="copiar('${r.resumen.replace(/'/g,"")}')">📋 Copiar</button></div>
+    </div>`;
+  });
+  document.getElementById('resultado').innerHTML=html;
+}
+function mostrarFiltros(){
+  document.getElementById('filtrosBox').style.display='block';
+  let tipos=['Todos','DECRETO','LEY','RESOLUCION','ACORDADA','SUCESORIO','HONORARIOS','CONCURSO','CLIENTE'];
+  let fueros=['Todos','Civil / Comercial','Penal','Laboral','Administrativo / Familia'];
+  document.getElementById('filtrosTipo').innerHTML=tipos.map(t=>`<button onclick="setTipo('${t}',this)" class="${t==='Todos'?'active':''}">${t}</button>`).join('');
+  document.getElementById('filtrosFuero').innerHTML=fueros.map(f=>`<button onclick="setFuero('${f}',this)" class="${f==='Todos'?'active':''}">${f}</button>`).join('');
+}
+async function filtrarActual(){
+  let buscar=document.getElementById('buscarDentro').value;
+  let res=await fetch(`/api/filtrar?tipo=${encodeURIComponent(tipoActual)}&fuero=${encodeURIComponent(fueroActual)}&buscar=${encodeURIComponent(buscar)}`);
+  let data=await res.json();
+  document.getElementById('info').innerHTML=`<div class="box"><b>🔎 Filtro: ${tipoActual} + ${fueroActual} - ${data.total} resultados</b></div>`;
+  render(data.resultados);
+}
+function setTipo(t,btn){ tipoActual=t; document.querySelectorAll('#filtrosTipo button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); filtrarActual(); }
+function setFuero(f,btn){ fueroActual=f; document.querySelectorAll('#filtrosFuero button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); filtrarActual(); }
+async function buscar(){
+  let numero=document.getElementById('numero').value; let clientes=document.getElementById('clientes').value;
+  document.getElementById('resultado').innerHTML='<div class="box">⏳ Leyendo PDF...</div>';
+  let res=await fetch(`/api/buscar?numero=${numero}&clientes=${encodeURIComponent(clientes)}`);
+  let data=await res.json();
+  document.getElementById('info').innerHTML=`<div class="box"><b>✅ Boletín N° ${data.numero} - ${data.total} hallazgos</b><br>${Object.entries(data.resumen_por_tipo).map(([k,v])=>k+': '+v).join(' • ')}</div>`;
+  mostrarFiltros(); render(data.resultados);
+}
+async function buscarRango(){
+  let desde=document.getElementById('desde').value; let hasta=document.getElementById('hasta').value; let clientes=document.getElementById('clientes').value;
+  document.getElementById('resultado').innerHTML='<div class="box">⏳ Buscando del '+desde+' al '+hasta+'...</div>';
+  let res=await fetch(`/api/buscar_rango?desde=${desde}&hasta=${hasta}&clientes=${encodeURIComponent(clientes)}`);
+  let data=await res.json();
+  document.getElementById('info').innerHTML=`<div class="box"><b>✅ Rango ${desde} a ${hasta} - ${data.total} hallazgos</b></div>`;
+  mostrarFiltros(); render(data.resultados);
+}
+function copiar(t){ navigator.clipboard.writeText(t); alert('Copiado!'); }
+// Instalar como App
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js');
+}
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  let btn = document.createElement('button');
+  btn.textContent = '📱 INSTALAR APP EN EL CELULAR';
+  btn.style.cssText = 'width:100%;padding:14px;background:#FFC107;color:#111;border:none;border-radius:10px;font-weight:800;cursor:pointer;margin:12px';
+  btn.onclick = () => { deferredPrompt.prompt(); };
+  document.body.prepend(btn);
+});
+</script>
+</body>
+</html>

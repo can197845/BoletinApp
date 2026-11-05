@@ -1,0 +1,24 @@
+{
+  "name": "Boletín Al Día - Río Negro",
+  "short_name": "Boletín Al Día",
+  "description": "Decretos, Leyes, Sucesiones y Honorarios - Río Negro",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A2F5C",
+  "theme_color": "#0A2F5C",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
