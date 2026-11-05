@@ -16,10 +16,43 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           
+      - name: Instalar Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.5'
+
       - name: Crear proyecto Android
         run: |
           mkdir -p android/app/src/main/java/com/viedma/boletinaldia
-          mkdir -p android/app/src/main/res/layout
+          
+          cat > android/settings.gradle << 'EOF'
+          include ':app'
+          EOF
+          
+          cat > android/build.gradle << 'EOF'
+          buildscript {
+              repositories { google(); mavenCentral() }
+              dependencies { classpath 'com.android.application:8.2.0' }
+          }
+          allprojects { repositories { google(); mavenCentral() } }
+          EOF
+          
+          cat > android/app/build.gradle << 'EOF'
+          apply plugin: 'com.android.application'
+          android {
+              namespace 'com.viedma.boletinaldia'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.viedma.boletinaldia"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+          }
+          dependencies { implementation 'androidx.appcompat:appcompat:1.6.1' }
+          EOF
           
           cat > android/app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
@@ -58,19 +91,10 @@ jobs:
           }
           EOF
           
-          cat > android/app/src/main/res/layout/activity_main.xml << 'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <WebView xmlns:android="http://schemas.android.com/apk/res/android"
-              android:id="@+id/webview"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent" />
-          EOF
-          
       - name: Generar APK
         run: |
           cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug
+          gradle assembleDebug
           
       - name: Subir APK
         uses: actions/upload-artifact@v4
